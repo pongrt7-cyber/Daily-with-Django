@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<h1 class="text-2xl font-bold text-slate-100 mb-6 flex items-center gap-2">
+    <i class="fa-solid fa-money-bill-transfer text-rose-400"></i> {{ title }}
+</h1>
+
+<div class="glass-card rounded-2xl shadow-lg p-6 max-w-lg">
+    <form method="post" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">วันที่</label>
+            {{ form.date }}
+        </div>
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">รายการ</label>
+            {{ form.title }}
+        </div>
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">จำนวนเงิน (บาท)</label>
+            {{ form.amount }}
+        </div>
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">หมวดหมู่</label>
+            {{ form.category }}
+        </div>
+        <div>
+            <label class="block text-sm text-slate-400 mb-1">หมายเหตุ</label>
+            {{ form.note }}
+        </div>
+        <div class="flex gap-3 pt-2">
+            <button type="submit"
+                    class="flex-1 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-navy-950 font-semibold transition shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid fa-floppy-disk"></i> บันทึก
+            </button>
+            <a href="{% url 'expense_list' %}"
+               class="flex-1 text-center py-2.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition">
+                ยกเลิก
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

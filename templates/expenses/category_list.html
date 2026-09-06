@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% block title %}หมวดหมู่{% endblock %}
+{% block content %}
+<div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <h1 class="text-2xl font-bold text-slate-100 flex items-center gap-2">
+        <i class="fa-solid fa-tags text-cyan-400"></i> หมวดหมู่ค่าใช้จ่าย
+    </h1>
+    <a href="{% url 'category_create' %}"
+       class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-navy-950 font-semibold shadow-lg shadow-cyan-500/20 transition">
+        <i class="fa-solid fa-plus"></i> เพิ่มหมวดหมู่
+    </a>
+</div>
+
+<div class="glass-card rounded-2xl overflow-hidden shadow-lg">
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="bg-navy-900/60 text-slate-400 uppercase text-xs tracking-wider">
+                <tr>
+                    <th class="px-4 py-3 text-left">ชื่อหมวดหมู่</th>
+                    <th class="px-4 py-3 text-right">ยอดใช้จ่ายสะสม</th>
+                    <th class="px-4 py-3 text-right">จัดการ</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                {% for category in categories %}
+                <tr class="table-dark-row">
+                    <td class="px-4 py-3 text-slate-100">{{ category.name }}</td>
+                    <td class="px-4 py-3 text-right text-slate-300">{{ category.expense_total|default:0|floatformat:2|intcomma }} บาท</td>
+                    <td class="px-4 py-3">
+                        <div class="flex justify-end gap-2">
+                            <a href="{% url 'category_update' category.pk %}"
+                               class="w-8 h-8 flex items-center justify-center rounded-lg bg-blue-500/10 text-blue-300 hover:bg-blue-500/20 border border-blue-500/20 transition">
+                                <i class="fa-solid fa-pen text-xs"></i>
+                            </a>
+                            <form method="post" action="{% url 'category_delete' category.pk %}" class="delete-form">
+                                {% csrf_token %}
+                                <button type="submit" data-name="{{ category.name }}"
+                                        class="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-500/10 text-rose-300 hover:bg-rose-500/20 border border-rose-500/20 transition">
+                                    <i class="fa-solid fa-trash text-xs"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="3" class="text-center text-slate-500 py-10">ยังไม่มีหมวดหมู่</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

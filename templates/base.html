@@ -1,0 +1,207 @@
+{% load humanize app_extras %}
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Daily Expense Tracker{% endblock %}</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        navy: {
+                            950: '#0b1120',
+                            900: '#0f172a',
+                            800: '#111827',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-navy-950 text-slate-200 min-h-screen font-sans antialiased">
+
+{% if user.is_authenticated %}
+<div class="flex min-h-screen">
+
+    <!-- Mobile overlay -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black/60 z-30 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed z-40 top-0 left-0 h-full w-64 bg-navy-900/95 border-r border-white/10 flex flex-col -translate-x-full md:translate-x-0">
+        <div class="px-5 py-5 border-b border-white/10 flex items-center gap-2">
+            <span class="text-2xl">💰</span>
+            <div>
+                <div class="font-bold text-slate-100 leading-none">Expense Tracker</div>
+                <div class="text-xs text-slate-400">ระบบบันทึกรายรับ-รายจ่าย</div>
+            </div>
+        </div>
+
+        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            <a href="{% url 'dashboard' %}" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-gauge-high w-5 text-center"></i> Dashboard
+            </a>
+            <a href="{% url 'expense_list' %}" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 {% if 'expense' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fa-solid fa-money-bill-transfer w-5 text-center"></i> ค่าใช้จ่าย
+            </a>
+            <a href="{% url 'income_list' %}" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 {% if 'income' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fa-solid fa-sack-dollar w-5 text-center"></i> รายรับ
+            </a>
+            <a href="{% url 'category_list' %}" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 {% if 'category' in request.resolver_match.url_name %}active{% endif %}">
+                <i class="fa-solid fa-tags w-5 text-center"></i> หมวดหมู่
+            </a>
+            <a href="{% url 'monthly_summary' %}" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 {% if request.resolver_match.url_name == 'monthly_summary' %}active{% endif %}">
+                <i class="fa-solid fa-calendar-days w-5 text-center"></i> สรุปรายเดือน
+            </a>
+            <a href="/admin/" target="_blank" class="nav-glow flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300">
+                <i class="fa-solid fa-toolbox w-5 text-center"></i> Django Admin
+            </a>
+        </nav>
+
+        <div class="p-3 border-t border-white/10">
+            <div class="flex items-center gap-3 px-2 py-2 mb-2">
+                <div class="w-9 h-9 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold">
+                    {{ user.username|first|upper }}
+                </div>
+                <div class="text-sm">
+                    <div class="text-slate-200">{{ user.username }}</div>
+                    <div class="text-xs text-slate-400">ผู้ใช้งาน</div>
+                </div>
+            </div>
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-red-300 border border-red-500/30 hover:bg-red-500/10 transition">
+                    <i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ
+                </button>
+            </form>
+        </div>
+    </aside>
+
+    <!-- Main column -->
+    <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+
+        <!-- Topbar -->
+        <header class="sticky top-0 z-20 bg-navy-900/80 backdrop-blur border-b border-white/10">
+            <div class="flex items-center justify-between px-4 md:px-6 py-3">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleSidebar()" class="md:hidden text-slate-300 hover:text-cyan-300 text-xl">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div>
+                        <div id="liveClock" class="text-2xl md:text-3xl font-bold tracking-wider text-cyan-300 font-mono">--:--:--</div>
+                        <div id="liveDate" class="text-xs md:text-sm text-slate-400">กำลังโหลดวันที่...</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs md:text-sm px-3 py-1.5 rounded-full">
+                    <span class="pulse-dot"></span>
+                    <span>ออนไลน์</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 md:p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+{% else %}
+    {% block auth_content %}{% endblock %}
+{% endif %}
+
+<script id="django-messages" type="application/json">{{ messages|messages_to_json }}</script>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        sidebar.classList.toggle('-translate-x-full');
+        overlay.classList.toggle('hidden');
+    }
+
+    // ---------------- Real-time clock (Thai, พ.ศ.) ----------------
+    const THAI_DAYS = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+    const THAI_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+    function updateClock() {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        const clockEl = document.getElementById('liveClock');
+        const dateEl = document.getElementById('liveDate');
+        if (clockEl) clockEl.textContent = `${hh}:${mm}:${ss}`;
+        if (dateEl) {
+            const dayName = THAI_DAYS[now.getDay()];
+            const day = now.getDate();
+            const month = THAI_MONTHS[now.getMonth()];
+            const buddhistYear = now.getFullYear() + 543;
+            dateEl.textContent = `${dayName}ที่ ${day} ${month} ${buddhistYear}`;
+        }
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // ---------------- Django messages -> SweetAlert2 ----------------
+    document.addEventListener('DOMContentLoaded', function () {
+        const el = document.getElementById('django-messages');
+        if (!el) return;
+        let msgs = [];
+        try { msgs = JSON.parse(el.textContent); } catch (e) { msgs = []; }
+
+        msgs.forEach(function (msg, idx) {
+            const tag = msg.tags || 'info';
+            let icon = 'info';
+            if (tag.includes('success')) icon = 'success';
+            else if (tag.includes('error') || tag.includes('danger')) icon = 'error';
+            else if (tag.includes('warning')) icon = 'warning';
+
+            setTimeout(function () {
+                Swal.fire({
+                    icon: icon,
+                    title: msg.message,
+                    background: '#0f172a',
+                    color: '#e2e8f0',
+                    confirmButtonColor: '#06b6d4',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 3000,
+                    showConfirmButton: false,
+                });
+            }, idx * 150);
+        });
+    });
+
+    // ---------------- Generic delete confirmation ----------------
+    document.querySelectorAll('.delete-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            const btn = form.querySelector('button[type=submit]');
+            const name = (btn && btn.dataset.name) || 'รายการนี้';
+            Swal.fire({
+                title: 'ยืนยันการลบ?',
+                html: `คุณต้องการลบ &quot;<strong>${name}</strong>&quot; ใช่หรือไม่?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: '<i class="fa-solid fa-trash"></i> ลบ',
+                cancelButtonText: 'ยกเลิก',
+                background: '#0f172a',
+                color: '#e2e8f0',
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#334155',
+            }).then(function (result) {
+                if (result.isConfirmed) form.submit();
+            });
+        });
+    });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>
